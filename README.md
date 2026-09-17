@@ -2,6 +2,8 @@
 
 Final prototype pack based on v34.
 
+https://pralay-x-flame.vercel.app/
+
 ### Report fixes in v36
 - Fixed official report printing so the report is no longer clipped by the modal scroll viewport.
 - Print / Save PDF now prints the complete report from the top, including the PRALAY X logo, report metadata, KPI/stat cards, map snapshot, incident situation, risk & prediction, alerts, evacuation/shelter information, response routes/resources, and verification/audit note.
