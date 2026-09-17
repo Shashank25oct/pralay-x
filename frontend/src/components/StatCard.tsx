@@ -1,0 +1,1 @@
+export default function StatCard({label,value,sub,accent}:{label:string,value:string|number,sub?:string,accent?:string}){return <div className="stat-card"><div className="stat-label">{label}</div><div className="stat-value" style={{color:accent}}>{value}</div>{sub&&<div className="stat-sub">{sub}</div>}</div>}

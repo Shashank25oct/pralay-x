@@ -1,0 +1,295 @@
+import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
+import {
+  Activity, AlertTriangle, ArrowRight, BarChart3, Bell, Bot, Building2, Check,
+  ChevronDown, ChevronRight, CircleHelp, Clock3, FileText, Flame, Globe2, House,
+  Layers3, LogIn, LogOut, Map as MapIcon, Menu, MessageSquareWarning, Navigation,
+  PhoneCall, Play, RefreshCw, Search, Send, Settings, ShieldCheck, Siren, Sparkles,
+  Target, UserRound, Waves, X, Zap, Plus, Truck, Database, Megaphone
+} from 'lucide-react';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, Bar } from 'recharts';
+import { api, eventsUrl } from './api';
+import Logo from './components/Logo';
+import Badge from './components/Badge';
+import MapView from './components/MapView';
+
+const disasterOptions = ['Flood', 'Cyclone', 'Earthquake', 'Wildfire', 'Landslide', 'Extreme Rainfall', 'Heatwave'];
+const severityOptions = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL'];
+const stateOptions = ['Andhra Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Delhi', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Odisha', 'Punjab', 'Rajasthan', 'Tamil Nadu', 'Telangana', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'];
+const stateDefaults: Record<string, { district: string; latitude: number; longitude: number }> = {
+  'Andhra Pradesh': { district: 'Visakhapatnam', latitude: 17.6868, longitude: 83.2185 }, 'Assam': { district: 'Guwahati', latitude: 26.1445, longitude: 91.7362 }, 'Bihar': { district: 'Patna', latitude: 25.5941, longitude: 85.1376 }, 'Chhattisgarh': { district: 'Raipur', latitude: 21.2514, longitude: 81.6296 }, 'Delhi': { district: 'New Delhi', latitude: 28.6139, longitude: 77.2090 }, 'Gujarat': { district: 'Ahmedabad', latitude: 23.0225, longitude: 72.5714 }, 'Haryana': { district: 'Gurugram', latitude: 28.4595, longitude: 77.0266 }, 'Himachal Pradesh': { district: 'Shimla', latitude: 31.1048, longitude: 77.1734 }, 'Jharkhand': { district: 'Ranchi', latitude: 23.3441, longitude: 85.3096 }, 'Karnataka': { district: 'Bengaluru Urban', latitude: 12.9716, longitude: 77.5946 }, 'Kerala': { district: 'Ernakulam', latitude: 9.9312, longitude: 76.2673 }, 'Madhya Pradesh': { district: 'Bhopal', latitude: 23.2599, longitude: 77.4126 }, 'Maharashtra': { district: 'Mumbai City', latitude: 19.0760, longitude: 72.8777 }, 'Odisha': { district: 'Khordha', latitude: 20.2961, longitude: 85.8245 }, 'Punjab': { district: 'Ludhiana', latitude: 30.9010, longitude: 75.8573 }, 'Rajasthan': { district: 'Jaipur', latitude: 26.9124, longitude: 75.7873 }, 'Tamil Nadu': { district: 'Chennai', latitude: 13.0827, longitude: 80.2707 }, 'Telangana': { district: 'Hyderabad', latitude: 17.3850, longitude: 78.4867 }, 'Uttar Pradesh': { district: 'Lucknow', latitude: 26.8467, longitude: 80.9462 }, 'Uttarakhand': { district: 'Dehradun', latitude: 30.3165, longitude: 78.0322 }, 'West Bengal': { district: 'Kolkata', latitude: 22.5726, longitude: 88.3639 }
+};
+const chartData = [
+  { t: '00', value: 3.2, danger: 5.8 }, { t: '04', value: 3.5, danger: 5.8 },
+  { t: '08', value: 4.0, danger: 5.8 }, { t: '12', value: 4.6, danger: 5.8 },
+  { t: '16', value: 5.1, danger: 5.8 }, { t: '20', value: 5.9, danger: 5.8 },
+  { t: '24', value: 6.3, danger: 5.8 },
+];
+
+function App() {
+  const [screen, setScreen] = useState<'intro' | 'login' | 'public' | 'authority'>('intro');
+  const [eventTick, setEventTick] = useState(0);
+  const [auth, setAuth] = useState(!!localStorage.getItem('pralay_token'));
+
+  useEffect(() => {
+    const es = new EventSource(eventsUrl);
+    const bump = () => setEventTick(v => v + 1);
+    ['incident.created', 'incident.updated', 'complaint.created', 'complaint.updated', 'risk.updated', 'alert.created'].forEach(e => es.addEventListener(e, bump));
+    return () => es.close();
+  }, []);
+
+  if (screen === 'intro') return <Intro onPublic={() => setScreen('public')} onLogin={() => setScreen('login')} />;
+  if (screen === 'login') return <Login onBack={() => setScreen('intro')} onSuccess={() => { setAuth(true); setScreen('authority'); }} />;
+  if (screen === 'authority' && auth) return <Authority tick={eventTick} onLogout={() => { localStorage.removeItem('pralay_token'); setAuth(false); setScreen('intro'); }} />;
+  return <PublicSafety tick={eventTick} onAuthority={() => setScreen(auth ? 'authority' : 'login')} onHome={() => setScreen('intro')} />;
+}
+
+function Intro({ onPublic, onLogin }: { onPublic: () => void; onLogin: () => void }) {
+  return <div className="intro-shell">
+    <div className="intro-grid" />
+    <header className="intro-header"><Logo /><div className="intro-meta"><span><span className="pulse" /> SYSTEM READY</span><span>INDIA • 24×7 INTELLIGENCE</span></div></header>
+    <main className="intro-main">
+      <section className="intro-copy">
+        <Badge type="live">DISASTER INTELLIGENCE & EARLY WARNING</Badge>
+        <h1>Intelligence today.<br /><span>A safer tomorrow.</span></h1>
+        <p className="intro-lead">Pralay X connects disaster data, predictive intelligence, live mapping and coordinated response into one resilient safety platform.</p>
+        <div className="intro-actions">
+          <button className="primary hero-cta" onClick={onPublic}>EXPLORE PUBLIC SAFETY <ArrowRight size={18} /></button>
+          <button className="secondary hero-cta" onClick={onLogin}><LogIn size={18} /> AUTHORITY LOGIN</button>
+        </div>
+        <div className="trust-row"><span><ShieldCheck size={16} /> VERIFIED DATA PATH</span><span><Globe2 size={16} /> MULTI-STATE</span><span><Zap size={16} /> REALTIME READY</span></div>
+      </section>
+      <section className="intro-orbit" aria-label="Pralay X intelligence preview">
+        <div className="orbit-ring ring-one" /><div className="orbit-ring ring-two" /><div className="orbit-core"><img src="/pralay-x-logo.png" alt="Pralay X" /><div className="orbit-label">PRALAY AI</div></div>
+        <div className="orbit-node node-a"><Waves size={17} /><b>RISK</b><span>LIVE</span></div>
+        <div className="orbit-node node-b"><Bell size={17} /><b>ALERTS</b><span>READY</span></div>
+        <div className="orbit-node node-c"><MapIcon size={17} /><b>GIS</b><span>ACTIVE</span></div>
+        <div className="orbit-node node-d"><Bot size={17} /><b>AI</b><span>ONLINE</span></div>
+      </section>
+    </main>
+    <footer className="intro-footer"><span>PEOPLE <i /> PLANET <i /> PREPAREDNESS</span><span>RESILIENT • INFORMED • UNITED</span></footer>
+  </div>;
+}
+
+function Login({ onBack, onSuccess }: { onBack: () => void; onSuccess: () => void }) {
+  const [user, setUser] = useState('admin@pralayx.gov.in');
+  const [password, setPassword] = useState('PralayX@123');
+  const [show, setShow] = useState(false);
+  const [remember, setRemember] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user.trim() || !password) { setError('Please enter your email / user ID and password.'); return; }
+    setBusy(true); setError('');
+    try { const d = await api.login(user.trim(), password); localStorage.setItem('pralay_token', d.access_token); if (remember) localStorage.setItem('pralay_remember', '1'); onSuccess(); }
+    catch (e: any) { setError(e.message || 'Email or password is incorrect.'); }
+    finally { setBusy(false); }
+  };
+
+  return <div className="auth-shell">
+    <div className="auth-backdrop" />
+    <header className="auth-header"><button className="back-btn" onClick={onBack}>← BACK TO INTRO</button><Logo small /><Badge type="live">SECURE CONNECTION</Badge></header>
+    <main className="auth-main">
+      <section className="auth-side">
+        <Badge type="ai">AUTHORIZED OPERATIONS</Badge>
+        <h1>Secure access to the<br /><span>Pralay X Command Centre.</span></h1>
+        <p>Monitor national and state situations, verify incidents, coordinate response and inspect predictive risk intelligence.</p>
+        <div className="auth-points"><span><Check size={15} /> Role-based access</span><span><Check size={15} /> MFA-ready authority workflow</span><span><Check size={15} /> Audited operational actions</span><span><Check size={15} /> AI recommendations remain human-controlled</span></div>
+      </section>
+      <form className="login-card-large" onSubmit={submit}>
+        <div className="login-card-head"><div className="secure-icon"><ShieldCheck size={22} /></div><div><div className="eyebrow">PRALAY X</div><h2>Welcome back</h2><p>Sign in to continue to the authority portal.</p></div></div>
+        <label>OFFICIAL EMAIL / USER ID<input autoFocus value={user} onChange={e => setUser(e.target.value)} autoComplete="username" placeholder="officer@organization.gov" /></label>
+        <label>PASSWORD<div className="password-wrap"><input type={show ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" placeholder="Enter password" /><button type="button" onClick={() => setShow(v => !v)} aria-label={show ? 'Hide password' : 'Show password'}>{show ? 'HIDE' : 'SHOW'}</button></div></label>
+        <div className="login-options"><label className="checkline"><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} /> Remember this device</label><button type="button" className="text-btn" onClick={() => setError('If an account matches the information provided, password-reset instructions will be sent.')}>Forgot password?</button></div>
+        {error && <div className="form-error"><AlertTriangle size={17} /> <span>{error}</span></div>}
+        <button className="primary full login-submit" disabled={busy}>{busy ? <><RefreshCw className="spin" size={17} /> AUTHENTICATING…</> : <>LOG IN <ArrowRight size={17} /></>}</button>
+        <div className="login-security"><ShieldCheck size={16} /><span><b>AUTHORIZED ACCESS ONLY</b><br />Access attempts may be logged and monitored for security purposes.</span></div>
+        <div className="demo-note">Prototype access: <b>admin@pralayx.gov.in</b> / <b>PralayX@123</b></div>
+      </form>
+    </main>
+    <footer className="auth-footer">SECURE LOGIN <i /> MFA ENABLED <i /> SESSION PROTECTED <i /> DATA ENCRYPTED</footer>
+  </div>;
+}
+
+function PublicSafety({ tick, onAuthority, onHome }: { tick: number; onAuthority: () => void; onHome: () => void }) {
+  const [data, setData] = useState<any>(null);
+  const [complaintOpen, setComplaintOpen] = useState(false);
+  const [location, setLocation] = useState('Raipur, Chhattisgarh');
+  useEffect(() => { api.publicDashboard().then(setData).catch(console.error); }, [tick]);
+  if (!data) return <Loading />;
+  const risk = data.risk_outlook;
+  const active = risk && risk.risk_score >= 70;
+  return <div className="portal-shell public-shell">
+    <header className="portal-header"><button className="brand-button" onClick={onHome}><Logo small /></button><div className="portal-nav"><button className="active">SAFETY</button><button onClick={() => document.getElementById('public-map')?.scrollIntoView()}>LIVE MAP</button><button onClick={() => document.getElementById('help')?.scrollIntoView()}>HELP NEAR YOU</button><button onClick={() => document.getElementById('updates')?.scrollIntoView()}>UPDATES</button></div><div className="portal-right"><Badge type="live">LIVE</Badge><button className="outline-btn" onClick={onAuthority}><UserRound size={16} /> AUTHORITY</button></div></header>
+    {active && <div className="critical-ribbon"><Siren size={18} /><b>HIGH-PRIORITY SAFETY NOTICE</b><span>Active simulated hazard detected in your selected area.</span><button onClick={() => document.getElementById('safety')?.scrollIntoView()}>VIEW GUIDANCE <ChevronRight size={15} /></button></div>}
+    <main className="public-main">
+      <section className="public-hero"><div><Badge type="info">PUBLIC SAFETY PORTAL</Badge><h1>Know what’s happening.<br /><span>Know what to do next.</span></h1><p>Real-time disaster alerts, verified safety information, nearby assistance and predictive risk outlook.</p><div className="location-selector"><Navigation size={17} /><div><small>YOUR SELECTED AREA</small><b>{location}</b></div><ChevronDown size={17} /><select aria-label="Selected area" value={location} onChange={e => setLocation(e.target.value)}><option>Raipur, Chhattisgarh</option><option>Mumbai, Maharashtra</option><option>Bhubaneswar, Odisha</option><option>Bhopal, Madhya Pradesh</option></select></div></div><div className="public-hero-stat"><div className="mini-radar" aria-hidden="true"><i /><i /><i /><i /><i /></div><div className="eyebrow">SYSTEM ASSESSMENT</div><strong>{active ? 'ATTENTION REQUIRED' : 'AREA MONITORING'}</strong><p>{active ? 'An active hazard is being tracked. Follow official instructions.' : 'No critical emergency is currently active in this prototype area.'}</p></div></section>
+      <section id="safety" className={`safety-banner ${active ? 'danger' : ''}`}><div className="safety-symbol">{active ? <AlertTriangle size={30} /> : <ShieldCheck size={30} />}</div><div><div className="eyebrow">YOUR SAFETY STATUS</div><h2>{data.safety_status}</h2><p>{data.safety_message}</p></div>{active && <button className="primary" onClick={() => alert('Prototype guidance: move to safer ground, avoid floodwater, follow official evacuation instructions and contact emergency services if in immediate danger.')}>SAFETY INSTRUCTIONS <ArrowRight size={17} /></button>}</section>
+      <section className="public-actions"><button className="emergency-action" onClick={() => alert('Emergency: 112 — nationwide emergency response.')}><Siren size={20} /> EMERGENCY HELP <span>112</span></button><button onClick={() => document.getElementById('updates')?.scrollIntoView()}><Bell size={19} /> ACTIVE ALERTS</button><button onClick={() => document.getElementById('public-map')?.scrollIntoView()}><MapIcon size={19} /> CHECK MY AREA</button><button onClick={() => setComplaintOpen(true)}><MessageSquareWarning size={19} /> REPORT A PROBLEM</button></section>
+      <section className="public-grid"><div id="public-map" className="panel public-map-card"><div className="panel-head"><div><div className="eyebrow">LIVE SITUATION</div><h3>AREA MAP</h3></div><Badge type={active ? 'high' : 'safe'}>{active ? 'RISK ACTIVE' : 'MONITORING'}</Badge></div><MapView incidents={data.nearby_incidents} shelters={data.nearby_shelters} hospitals={data.nearby_hospitals} showIncidents={active} /></div><div id="updates" className="panel alerts-panel"><div className="panel-head"><div><div className="eyebrow">OFFICIAL INFORMATION</div><h3>ACTIVE ALERTS</h3></div><Badge type="info">{data.active_alerts.length}</Badge></div>{data.active_alerts.length ? data.active_alerts.map((a: any) => <div className="public-alert" key={a.id}><Badge type={a.severity}>{a.severity}</Badge><div><b>{a.title}</b><p>{a.message}</p><small>{a.district}, {a.state} · {a.official ? 'Official' : 'Simulation'}</small></div></div>) : <Empty icon={<ShieldCheck size={20} />} text="No active critical alerts. Pralay X continues monitoring the selected area." />}</div></section>
+      <section id="help" className="public-three"><div className="panel"><PanelTitle icon={<House size={18} />} title="HELP NEAR YOU" /><div className="help-list">{data.nearby_shelters.slice(0, 2).map((s: any) => <HelpRow key={s.id} icon={<House />} title={s.name} detail={`${s.capacity - s.occupancy} spaces available · Medical ${s.medical ? 'available' : 'not listed'}`} />)}{data.nearby_hospitals.slice(0, 1).map((h: any) => <HelpRow key={h.id} icon={<Building2 />} title={h.name} detail="Open · Emergency care" blue />)}</div></div><div className="panel risk-card"><PanelTitle icon={<Bot size={18} />} title="AI RISK OUTLOOK" badge="AI ASSISTED" />{risk ? <><div className="risk-meter"><div className="risk-score">{risk.risk_score}<span>/100</span></div><div className="meter"><i style={{ width: `${risk.risk_score}%` }} /></div></div><div className="risk-meta"><Badge type={risk.risk_level}>{risk.risk_level}</Badge><b>{risk.probability}% probability</b><span>{risk.prediction_window}</span></div><div className="factor-list">{risk.factors.slice(0, 4).map((f: string) => <span key={f}>• {f}</span>)}</div></> : <Empty icon={<Sparkles size={20} />} text="Prediction engine is idle until a problem is introduced." />}</div><div className="panel emergency-card"><PanelTitle icon={<PhoneCall size={18} />} title="EMERGENCY CONTACTS" /><div className="contact-number">112</div><b>Nationwide Emergency</b><p>State-specific contacts are configurable from verified authority data before deployment.</p><button className="outline-btn full" onClick={() => alert('Prototype: connect verified state emergency contacts here.')}>VIEW CONTACT DIRECTORY</button></div></section>
+      <section className="public-ai-strip"><div className="ai-orb"><Bot size={22} /></div><div><Badge type="ai">PRALAY AI</Badge><h3>Need help understanding the situation?</h3><p>Ask about alerts, shelters, safety guidance or what changed recently.</p></div><button className="primary" onClick={() => alert('Prototype AI assistant: connect the approved RAG/LLM tool layer here.')}>ASK PRALAY <Sparkles size={17} /></button></section>
+    </main>
+    <footer className="portal-footer"><span>PRALAY X · DISASTER INTELLIGENCE & EARLY WARNING SYSTEM</span><span>Source • Freshness • Verification matter</span></footer>
+    {complaintOpen && <ComplaintModal onClose={() => setComplaintOpen(false)} />}
+  </div>;
+}
+
+function Authority({ tick, onLogout }: { tick: number; onLogout: () => void }) {
+  const [data, setData] = useState<any>(null); const [selected, setSelected] = useState<any>(null); const [simOpen, setSimOpen] = useState(false); const [report, setReport] = useState<any>(null); const [complaint, setComplaint] = useState<any>(null); const [query, setQuery] = useState(''); const [mobileNav, setMobileNav] = useState(false); const [stateFilter, setStateFilter] = useState('ALL INDIA'); const [quickOpen, setQuickOpen] = useState(false);
+  const load = () => api.authorityDashboard().then(setData).catch(e => { if (e.message === 'Unauthorized') onLogout(); });
+  useEffect(() => { load(); }, [tick]);
+  if (!data) return <Loading />;
+  const ai = data.ai_risk;
+  const scopedIncidents = data.incidents.filter((i: any) => stateFilter === 'ALL INDIA' || i.state === stateFilter);
+  const scopedStates = new Set(scopedIncidents.map((i: any) => i.state)).size;
+  const scopedCritical = scopedIncidents.filter((i: any) => String(i.severity).toUpperCase() === 'CRITICAL').length;
+  const scopedPopulation = scopedIncidents.reduce((sum: number, i: any) => sum + Number(i.affected_population || 0), 0);
+  const filtered = scopedIncidents.filter((i: any) => `${i.disaster_type} ${i.district} ${i.state}`.toLowerCase().includes(query.toLowerCase()));
+  const stateRows = (stateFilter === 'ALL INDIA' ? data.state_summary : data.state_summary.filter((s: any) => s.state === stateFilter)).length ? (stateFilter === 'ALL INDIA' ? data.state_summary : data.state_summary.filter((s: any) => s.state === stateFilter)) : [{ state: stateFilter === 'ALL INDIA' ? 'No active incidents' : stateFilter, incidents: 0, risk: 'LOW', people: 0, status: 'MONITORING' }];
+  return <div className="command-shell">
+    <aside className={`command-sidebar ${mobileNav ? 'open' : ''}`}><div className="side-brand"><Logo small /><button onClick={() => setMobileNav(false)}><X size={18} /></button></div><div className="side-status"><span className="pulse" /> SYSTEM OPERATIONAL</div><NavGroup title="MAIN" items={['COMMAND CENTRE', 'LIVE MAP', 'SITUATION', 'ALERTS', 'INCIDENTS', 'PREDICTIONS', 'REPORTS', 'OPERATIONS']} /><NavGroup title="INTELLIGENCE" items={['AI INTELLIGENCE', 'RISK ANALYSIS', 'FORECAST', 'IMPACT ANALYSIS', 'HISTORICAL DATA']} /><NavGroup title="ADMINISTRATION" items={['DATA ENTRY', 'STATE MANAGEMENT', 'DISTRICT MANAGEMENT', 'AUTHORITY USERS', 'RESOURCES', 'SETTINGS']} /><NavGroup title="COMMUNICATION" items={['COMMAND CHAT', 'AI ASSISTANT', 'BROADCAST', 'NOTIFICATIONS']} /><button className="simulation-side" onClick={() => setSimOpen(true)}><Play size={16} /> SIMULATION MODE</button></aside>
+    {mobileNav && <div className="mobile-nav-overlay" onClick={() => setMobileNav(false)} />}
+    <main className="command-main"><header className="command-header"><button className="mobile-menu" onClick={() => setMobileNav(true)}><Menu /></button><div><div className="eyebrow">GOVERNMENT / AUTHORITY</div><h1>COMMAND CENTRE</h1></div><div className="command-meta"><span><Clock3 size={15} /> {new Date().toLocaleString()}</span><Badge type="live">LIVE MONITORING</Badge><Badge type="ai">AI ACTIVE</Badge><button className="quick-action-btn" onClick={() => setQuickOpen(true)}><Plus size={15} /> QUICK ACTION</button><button className="icon-btn"><Bell size={17} /></button><button className="profile-chip"><UserRound size={16} /> NATIONAL AUTHORITY</button><button className="icon-btn" onClick={onLogout}><LogOut size={17} /></button></div></header>
+      <section className="kpi-strip"><Kpi label="ACTIVE DISASTERS" value={scopedIncidents.length} note={data.active_incidents ? '+ live' : 'Clear baseline'} icon={<Waves />} /><Kpi label="STATES AFFECTED" value={String(scopedStates).padStart(2, '0')} note={`${stateFilter === 'ALL INDIA' ? data.state_summary.length || 0 : 1} monitored areas`} icon={<Globe2 />} /><Kpi label="CRITICAL INCIDENTS" value={scopedCritical} note="Immediate attention" icon={<AlertTriangle />} danger /><Kpi label="PEOPLE AFFECTED" value={compact(scopedPopulation)} note="Current active exposure" icon={<Target />} /><Kpi label="RESCUE OPERATIONS" value={data.rescue_operations} note="Operational capacity" icon={<Siren />} /><Kpi label="ACTIVE RESOURCES" value={data.active_resources} note="Teams & facilities" icon={<Building2 />} /><Kpi label="AI RISK INDEX" value={`${ai.risk_score}/100`} note={ai.risk_level} icon={<Bot />} ai /></section>
+      <section className="command-top-grid"><div className="panel command-map"><div className="panel-head"><div><div className="eyebrow">LIVE GEOSPATIAL SITUATION</div><h3>INDIA • MULTI-STATE MONITOR</h3></div><div className="map-toolbar"><button><Layers3 size={16} /> LAYERS</button><label className="state-filter"><span>STATE</span><select aria-label="Filter dashboard by state" value={stateFilter} onChange={e => { setStateFilter(e.target.value); setQuery(''); }}><option>ALL INDIA</option>{stateOptions.map(x => <option key={x}>{x}</option>)}</select><ChevronDown size={14} /></label></div></div><MapView incidents={scopedIncidents} shelters={data.shelters} hospitals={data.hospitals} showIncidents={true} /></div><div className="panel incident-feed"><div className="panel-head"><div><div className="eyebrow">REALTIME</div><h3>LIVE INCIDENTS</h3></div><Badge type="info">{scopedIncidents.length}</Badge></div><div className="search-box"><Search size={16} /><input placeholder="Search incident, district or state" value={query} onChange={e => setQuery(e.target.value)} /></div><div className="feed-scroll">{filtered.length ? filtered.map((i: any) => <button className="incident-row" key={i.incident_id} onClick={() => setSelected(i)}><Badge type={i.severity}>{i.severity}</Badge><div><b>{i.disaster_type}</b><span>{i.district}, {i.state}</span><small>{i.affected_population.toLocaleString()} affected · {i.status}</small></div><ChevronRight size={16} /></button>) : <Empty icon={<ShieldCheck size={20} />} text="No incidents match the current filter." />}</div></div></section>
+      <section className="command-mid-grid"><div className="panel state-panel"><PanelTitle icon={<Globe2 size={18} />} title="STATE SITUATION" badge="MULTI-STATE" /><div className="data-table"><div className="table-head"><span>STATE</span><span>INCIDENTS</span><span>RISK</span><span>PEOPLE AFFECTED</span><span>STATUS</span></div>{stateRows.slice(0, 6).map((s: any) => <div className="table-row" key={s.state}><b>{s.state}</b><span>{s.incidents}</span><Badge type={s.risk}>{s.risk}</Badge><span>{compact(s.people)}</span><span className="status-text"><i /> {s.status}</span></div>)}</div></div><div className="panel analytics-panel"><PanelTitle icon={<BarChart3 size={18} />} title="DISASTER ACTIVITY" badge="LIVE" />{data.disaster_summary.length ? <div className="bar-chart"><ResponsiveContainer width="100%" height={190}><BarChart data={data.disaster_summary} layout="vertical" margin={{ left: 10, right: 10 }}><XAxis type="number" hide /><YAxis dataKey="type" type="category" width={95} tick={{ fontSize: 11 }} /><Tooltip /><Bar dataKey="percent" radius={[0, 5, 5, 0]} /></BarChart></ResponsiveContainer></div> : <Empty icon={<Activity size={20} />} text="No disaster activity. The platform is ready for simulation." />}</div><div className="panel system-panel"><PanelTitle icon={<Activity size={18} />} title="SYSTEM HEALTH" badge="ONLINE" /><div className="health-list">{Object.entries(data.system_health).map(([k, v]) => <div key={k}><span className="health-dot" /><span>{k.split('_').join(' ').toUpperCase()}</span><b>{String(v)}</b></div>)}</div></div></section>
+      <section className="command-ai-grid"><div className="panel ai-command"><PanelTitle icon={<Bot size={18} />} title="PRALAY AI INTELLIGENCE" badge="AI ASSISTED" /><div className="ai-command-head"><div><div className="big-risk">{ai.risk_score}<span>/100</span></div><Badge type={ai.risk_level}>{ai.risk_level} RISK</Badge></div><div className="ai-confidence"><span>MODEL CONFIDENCE</span><b>{ai.probability}%</b><small>Prediction ≠ certainty</small></div></div><div className="ai-factors">{ai.factors?.map((f: string) => <span key={f}><Check size={14} /> {f}</span>)}</div><div className="ai-recommendations"><div className="eyebrow">RECOMMENDED ACTIONS</div><Recommendation priority="HIGH" text="Pre-position rescue teams in the affected district." /><Recommendation priority="HIGH" text="Monitor rainfall and river thresholds." /><Recommendation priority="MEDIUM" text="Prepare shelter capacity for increased occupancy." /></div><div className="button-row"><button onClick={() => setSimOpen(true)}><Play size={16} /> RUN SCENARIO</button><button className="primary" onClick={() => api.report().then(setReport)}><FileText size={16} /> GENERATE REPORT</button></div></div><div className="panel forecast-panel"><PanelTitle icon={<Waves size={18} />} title="AI FORECAST" badge="NEXT 24 HRS" /><div className="forecast-caption"><div><small>RIVER LEVEL</small><b>{ai.risk_level === 'LOW' ? '3.2' : '5.9'} m</b></div><span>⚠ DANGER 5.8 m</span></div><ResponsiveContainer width="100%" height={170}><AreaChart data={chartData}><XAxis dataKey="t" tick={{ fontSize: 10 }} /><YAxis hide domain={[2.5, 6.8]} /><Tooltip /><Area type="monotone" dataKey="danger" strokeDasharray="4 4" fillOpacity={0} /><Area type="monotone" dataKey="value" fillOpacity={0.12} /></AreaChart></ResponsiveContainer><div className="forecast-footer"><span>NEXT 6 HRS</span><span>NEXT 12 HRS</span><span className="selected">NEXT 24 HRS</span><span>NEXT 72 HRS</span></div></div></section>
+      <section className="command-bottom-grid"><div className="panel complaints-panel"><PanelTitle icon={<MessageSquareWarning size={18} />} title="CITIZEN COMPLAINT INBOX" badge={`${data.complaints.length}`} />{data.complaints.length ? data.complaints.slice(0, 5).map((c: any) => <button className="complaint-row" key={c.complaint_id} onClick={() => setComplaint(c)}><div><Badge type={c.status === 'RECEIVED' ? 'warning' : 'info'}>{c.status}</Badge><b>{c.category}</b><span>{c.location}</span></div><ChevronRight size={16} /></button>) : <Empty icon={<MessageSquareWarning size={20} />} text="Citizen reports will appear here in realtime." />}</div><div className="panel command-brief"><PanelTitle icon={<Sparkles size={18} />} title="SITUATION BRIEF" badge="AI READY" /><p>One command surface for what is happening, where it is happening, what is likely next and what response requires attention.</p><div className="brief-line"><span><span className="pulse" /> DATA SYNCED</span><span>LAST UPDATE {new Date().toLocaleTimeString()}</span></div><button className="outline-btn full" onClick={() => alert('Prototype command chat: connect approved operational tools and RAG knowledge here.')}>OPEN COMMAND CHAT <ArrowRight size={16} /></button></div></section>
+    </main>
+    {selected && <IncidentDrawer incident={selected} onClose={() => setSelected(null)} onUpdate={(status) => api.updateIncident(selected.incident_id, status).then(() => { setSelected(null); load(); })} />}
+    {simOpen && <SimulationModal onClose={() => setSimOpen(false)} onDone={() => { setSimOpen(false); load(); }} />}
+    {quickOpen && <QuickActionModal onClose={() => setQuickOpen(false)} onSimulation={() => setSimOpen(true)} onReport={() => api.report().then(setReport)} onAI={() => document.querySelector(".ai-command")?.scrollIntoView({ behavior: "smooth", block: "center" })} onRefresh={load} />}
+    {report && <ReportModal report={report} onClose={() => setReport(null)} />}
+    {complaint && <ComplaintReview complaint={complaint} onClose={() => setComplaint(null)} onUpdate={(status) => api.updateComplaint(complaint.complaint_id, status).then(() => { setComplaint(null); load(); })} />}
+  </div>;
+}
+
+function NavGroup({ title, items }: { title: string; items: string[] }) { return <div className="nav-group"><small>{title}</small>{items.map((x, i) => <button className={`nav-item ${i === 0 && title === 'MAIN' ? 'active' : ''}`} key={x}>{x}</button>)}</div>; }
+function Kpi({ label, value, note, icon, danger, ai }: any) { return <div className={`kpi ${danger ? 'danger' : ''} ${ai ? 'ai' : ''}`}><div className="kpi-icon">{icon}</div><div><small>{label}</small><strong>{value}</strong><span>{note}</span></div></div>; }
+function PanelTitle({ icon, title, badge }: any) { return <div className="panel-head"><div className="panel-title"><span className="panel-title-icon">{icon}</span><h3>{title}</h3></div>{badge && <Badge type="info">{badge}</Badge>}</div>; }
+function HelpRow({ icon, title, detail, blue }: any) { return <div className="help-row"><span className={`help-icon ${blue ? 'blue' : ''}`}>{icon}</span><div><b>{title}</b><span>{detail}</span></div><button>MAP</button></div>; }
+function Recommendation({ priority, text }: { priority: string; text: string }) { return <div className="recommendation"><Badge type={priority}>{priority}</Badge><span>{text}</span><button>ASSIGN</button></div>; }
+function Empty({ icon, text }: { icon: ReactNode; text: string }) { return <div className="empty"><span>{icon}</span><p>{text}</p></div>; }
+function Loading() { return <div className="loading-screen"><div className="loading-logo"><img src="/pralay-x-logo.png" alt="Pralay X" /></div><div className="loading-line"><i /></div><p>INITIALIZING PRALAY X INTELLIGENCE…</p></div>; }
+
+function ComplaintModal({ onClose }: { onClose: () => void }) {
+  const [category, setCategory] = useState('Road Block');
+  const [message, setMessage] = useState('');
+  const [location, setLocation] = useState('Raipur, Chhattisgarh');
+  const [contact, setContact] = useState('');
+  const [done, setDone] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    try {
+      const d = await api.complaint({ category, message, location, contact });
+      setDone(d.complaint_id);
+      setMessage('');
+      window.setTimeout(onClose, 900);
+    } catch (e: any) {
+      alert(e.message || 'Unable to submit the report. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return <Modal onClose={onClose}>
+    <form onSubmit={submit}>
+      <Badge type="warning">CITIZEN REPORT</Badge>
+      <h2>Report a problem</h2>
+      <p>Your report is sent to authorized personnel for review. It is not automatically treated as an official incident.</p>
+      {done && <div className="success-box"><Check size={17} /> Report received: <b>{done}</b></div>}
+      <label>TYPE<select value={category} onChange={e => setCategory(e.target.value)} disabled={busy}>{['Road Block','Flood','Fire','Landslide','People Trapped','Missing Person','Other Complaint'].map(x => <option key={x}>{x}</option>)}</select></label>
+      <label>MESSAGE<textarea required minLength={5} value={message} onChange={e => setMessage(e.target.value)} placeholder="Describe what you want the authority to know…" disabled={busy} /></label>
+      <label>LOCATION<input required value={location} onChange={e => setLocation(e.target.value)} disabled={busy} /></label>
+      <label>CONTACT (OPTIONAL)<input value={contact} onChange={e => setContact(e.target.value)} disabled={busy} /></label>
+      <div className="privacy-note"><ShieldCheck size={16} /> Your report may be reviewed by authorized disaster-management personnel.</div>
+      <button type="submit" className="primary full" disabled={busy || !!done}>
+        {busy ? <><RefreshCw className="spin" size={16} /> SUBMITTING…</> : <><Send size={16} /> SUBMIT REPORT</>}
+      </button>
+    </form>
+  </Modal>;
+}
+
+function SimulationModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) { const [type, setType] = useState('Flood'); const [severity, setSeverity] = useState('HIGH'); const [state, setState] = useState('Chhattisgarh'); const [district, setDistrict] = useState('Raipur'); const [rain, setRain] = useState(220); const [river, setRiver] = useState(5.4); const [pop, setPop] = useState(184000); const [busy, setBusy] = useState(false); const [result, setResult] = useState<any>(null); const run = async () => { setBusy(true); try { const location = stateDefaults[state] || stateDefaults['Chhattisgarh']; setResult(await api.runSimulation({ disaster_type: type, severity, state, district, latitude: location.latitude, longitude: location.longitude, rainfall: Number(rain), river_level: Number(river), population: Number(pop) })); } catch (e: any) { alert(e.message); } finally { setBusy(false); } }; return <Modal onClose={onClose} wide><Badge type="ai">AUTHORITY ONLY</Badge><h2>Simulation mode</h2><p>Introduce a synthetic disaster and watch the full Pralay X loop: risk → incident → alert → realtime dashboard update.</p><div className="form-grid"><label>DISASTER<select value={type} onChange={e => setType(e.target.value)}>{disasterOptions.map(x => <option key={x}>{x}</option>)}</select></label><label>SEVERITY<select value={severity} onChange={e => setSeverity(e.target.value)}>{severityOptions.map(x => <option key={x}>{x}</option>)}</select></label><label>STATE<select value={state} onChange={e => { const next = e.target.value; setState(next); setDistrict(stateDefaults[next]?.district || 'Raipur'); }}>{stateOptions.map(x => <option key={x}>{x}</option>)}</select></label><label>DISTRICT<input value={district} onChange={e => setDistrict(e.target.value)} /></label><label>RAINFALL (MM)<input type="number" value={rain} onChange={e => setRain(Number(e.target.value))} /></label><label>RIVER LEVEL (M)<input type="number" step="0.1" value={river} onChange={e => setRiver(Number(e.target.value))} /></label><label>EXPOSED POPULATION<input type="number" value={pop} onChange={e => setPop(Number(e.target.value))} /></label></div><button className="primary full" onClick={run} disabled={busy}>{busy ? <><RefreshCw className="spin" size={16} /> RUNNING…</> : <><Play size={16} /> START SIMULATION</>}</button>{result && <div className="simulation-result"><div className="result-head"><Badge type={result.risk.risk_level}>{result.risk.risk_level}</Badge><b>{result.incident.disaster_type} · {result.incident.incident_id}</b></div><div className="result-metrics"><strong>{result.risk.risk_score}<small>RISK / 100</small></strong><strong>{result.risk.probability}%<small>PROBABILITY</small></strong><strong>{result.incident.affected_population.toLocaleString()}<small>EXPOSED</small></strong></div><div className="factor-list">{result.risk.factors.map((f: string) => <span key={f}><Check size={14} /> {f}</span>)}</div><button className="outline-btn full" onClick={onDone}>OPEN LIVE DASHBOARD <ArrowRight size={16} /></button></div>}</Modal>; }
+function IncidentDrawer({ incident, onClose, onUpdate }: any) { return <div className="drawer-overlay" onClick={onClose}><aside className="incident-drawer" onClick={e => e.stopPropagation()}><button className="close-btn" onClick={onClose}><X /></button><Badge type={incident.severity}>{incident.severity}</Badge><div className="eyebrow">INCIDENT #{incident.incident_id}</div><h2>{incident.disaster_type}</h2><p className="muted">{incident.district}, {incident.state}</p><div className="detail-grid"><div><small>AFFECTED</small><b>{incident.affected_population.toLocaleString()}</b></div><div><small>STATUS</small><b>{incident.status}</b></div><div><small>CASUALTIES</small><b>{incident.casualties}</b></div><div><small>SOURCE</small><b>Simulation</b></div></div><div className="drawer-timeline"><span><i /> Incident detected</span><span><i /> Authority notified</span><span><i /> Risk intelligence updated</span><span><i /> Response recommendation generated</span></div><p>{incident.description}</p><div className="button-row"><button onClick={() => onUpdate('UNDER REVIEW')}>REVIEW</button><button onClick={() => onUpdate('ESCALATED')}>ESCALATE</button><button className="primary" onClick={() => onUpdate('RESOLVED')}>RESOLVE</button></div></aside></div>; }
+function ComplaintReview({ complaint, onClose, onUpdate }: any) { return <Modal onClose={onClose}><Badge type="warning">CITIZEN REPORT</Badge><h2>{complaint.category}</h2><p>{complaint.message}</p><div className="detail-grid"><div><small>ID</small><b>{complaint.complaint_id}</b></div><div><small>LOCATION</small><b>{complaint.location || 'Not provided'}</b></div><div><small>STATUS</small><b>{complaint.status}</b></div><div><small>CONTACT</small><b>{complaint.contact || 'Not provided'}</b></div></div><div className="button-row"><button onClick={() => onUpdate('UNDER REVIEW')}>UNDER REVIEW</button><button onClick={() => onUpdate('VERIFIED')}>VERIFY</button><button className="primary" onClick={() => onUpdate('RESOLVED')}>RESOLVE</button></div></Modal>; }
+function QuickActionModal({ onClose, onSimulation, onReport, onAI, onRefresh }: { onClose: () => void; onSimulation: () => void; onReport: () => void; onAI: () => void; onRefresh: () => void }) {
+  const [action, setAction] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState('');
+  const [state, setState] = useState('Chhattisgarh');
+  const [district, setDistrict] = useState('Raipur');
+  const [type, setType] = useState('Flood');
+  const [severity, setSeverity] = useState('HIGH');
+  const [title, setTitle] = useState('');
+  const [message, setMessage] = useState('');
+  const [resource, setResource] = useState('Rescue Team');
+  const [quantity, setQuantity] = useState(1);
+
+  const choose = (next: string) => { setDone(''); setAction(next); };
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault(); if (busy) return; setBusy(true); setDone('');
+    try {
+      if (action === 'CREATE_ALERT') {
+        const d = await api.createAlert({ title: title || `${type} Alert — ${district}`, severity, state, district, message: message || `Authority-issued ${type.toLowerCase()} alert for ${district}.` });
+        setDone(`Alert ${d.id} created successfully.`);
+      } else if (action === 'REPORT_INCIDENT') {
+        const d = await api.reportIncident({ disaster_type: type, severity, state, district, latitude: (stateDefaults[state] || stateDefaults['Chhattisgarh']).latitude, longitude: (stateDefaults[state] || stateDefaults['Chhattisgarh']).longitude, description: message || `Authority-reported ${type.toLowerCase()} incident in ${district}.`, affected_population: 0 });
+        setDone(`Incident ${d.incident_id} recorded and sent for review.`);
+      } else if (action === 'ADD_DATA') {
+        const d = await api.addData({ disaster_type: type, severity, state, district, latitude: (stateDefaults[state] || stateDefaults['Chhattisgarh']).latitude, longitude: (stateDefaults[state] || stateDefaults['Chhattisgarh']).longitude, description: message || `New operational data entry for ${district}.` });
+        setDone(`Data entry ${d.incident_id} added as UNVERIFIED.`);
+      } else if (action === 'DISPATCH_RESOURCE') {
+        const d = await api.dispatchResource({ resource_type: resource, quantity: Number(quantity), state, district, note: message });
+        setDone(`Dispatch ${d.dispatch_id} created: ${quantity} × ${resource}.`);
+      } else if (action === 'BROADCAST') {
+        const d = await api.broadcast({ title: title || 'Authority Broadcast', severity, state, district, message: message || 'Official operational communication from Pralay X Command Centre.' });
+        setDone(`Broadcast ${d.id} published to the authority/public alert stream.`);
+      }
+      onRefresh();
+    } catch (e: any) { alert(e.message || 'Unable to complete this action.'); }
+    finally { setBusy(false); }
+  };
+
+  const actions = [
+    ['REPORT_INCIDENT', 'Report Incident', 'Create a new incident record for authority review.', <AlertTriangle size={20} />],
+    ['CREATE_ALERT', 'Create Alert', 'Issue a warning or advisory for a selected area.', <Bell size={20} />],
+    ['DISPATCH_RESOURCE', 'Dispatch Resource', 'Record deployment of rescue or emergency resources.', <Truck size={20} />],
+    ['ADD_DATA', 'Add Data', 'Add a new operational data point for verification.', <Database size={20} />],
+    ['GENERATE_REPORT', 'Generate Report', 'Generate the latest situation report.', <FileText size={20} />],
+    ['OPEN_AI', 'Open AI', 'Jump to PRALAY AI Intelligence.', <Bot size={20} />],
+    ['BROADCAST', 'Broadcast Message', 'Publish an official command-centre communication.', <Megaphone size={20} />],
+  ] as const;
+
+
+  return <Modal onClose={onClose} wide>
+    <Badge type="info">COMMAND CENTRE</Badge><h2>Quick Action</h2><p>Execute a common operational action without leaving the command surface.</p>
+    {!action ? <div className="quick-action-grid">{actions.map(([id, label, detail, icon]) => <button key={id} className="quick-action-card" onClick={() => { if (id === 'GENERATE_REPORT') { onReport(); onClose(); } else if (id === 'OPEN_AI') { onAI(); onClose(); } else if (id === 'REPORT_INCIDENT') { choose(id); } else if (id === 'CREATE_ALERT') { choose(id); } else if (id === 'DISPATCH_RESOURCE') { choose(id); } else if (id === 'ADD_DATA') { choose(id); } else if (id === 'BROADCAST') { choose(id); } }}><span className="quick-action-icon">{icon}</span><span><b>{label}</b><small>{detail}</small></span><ChevronRight size={16} /></button>)}</div> : <form onSubmit={submit}>
+      <button type="button" className="quick-back" onClick={() => setAction(null)}>← ALL QUICK ACTIONS</button>
+      <div className="quick-action-selected"><span className="quick-action-icon">{actions.find(a => a[0] === action)?.[3]}</span><div><b>{actions.find(a => a[0] === action)?.[1]}</b><small>{actions.find(a => a[0] === action)?.[2]}</small></div></div>
+      <div className="form-grid">
+        {action !== 'DISPATCH_RESOURCE' && <label>DISASTER / TYPE<select value={type} onChange={e => setType(e.target.value)}>{disasterOptions.map(x => <option key={x}>{x}</option>)}</select></label>}
+        {action !== 'DISPATCH_RESOURCE' && <label>SEVERITY<select value={severity} onChange={e => setSeverity(e.target.value)}>{severityOptions.map(x => <option key={x}>{x}</option>)}</select></label>}
+        <label>STATE<select value={state} onChange={e => { const next = e.target.value; setState(next); setDistrict(stateDefaults[next]?.district || 'Raipur'); }}>{stateOptions.map(x => <option key={x}>{x}</option>)}</select></label>
+        <label>DISTRICT<input value={district} onChange={e => setDistrict(e.target.value)} /></label>
+        {action === 'DISPATCH_RESOURCE' && <><label>RESOURCE<select value={resource} onChange={e => setResource(e.target.value)}>{['Rescue Team','Ambulance','Fire Unit','Boat','Helicopter','Medical Team','Relief Materials','Vehicle'].map(x => <option key={x}>{x}</option>)}</select></label><label>QUANTITY<input type="number" min="1" value={quantity} onChange={e => setQuantity(Number(e.target.value))} /></label></>}
+        {(action === 'CREATE_ALERT' || action === 'BROADCAST') && <label>TITLE<input value={title} onChange={e => setTitle(e.target.value)} placeholder={action === 'BROADCAST' ? 'Official command message' : 'Alert title'} /></label>}
+      </div>
+      {action !== 'DISPATCH_RESOURCE' || true ? <label>{action === 'DISPATCH_RESOURCE' ? 'DISPATCH NOTE (OPTIONAL)' : action === 'BROADCAST' ? 'MESSAGE' : 'DESCRIPTION'}<textarea value={message} onChange={e => setMessage(e.target.value)} required={action === 'BROADCAST'} placeholder="Enter operational details…" /></label> : null}
+      {done && <div className="success-box"><Check size={17} /> {done}</div>}
+      <div className="button-row"><button type="button" onClick={() => setAction(null)}>BACK</button><button className="primary" type="submit" disabled={busy}>{busy ? <><RefreshCw className="spin" size={16} /> PROCESSING…</> : <>EXECUTE ACTION <ArrowRight size={16} /></>}</button></div>
+    </form>}
+  </Modal>;
+}
+
+function ReportModal({ report, onClose }: any) { return <Modal onClose={onClose}><Badge type="info">GENERATED</Badge><h2>{report.title}</h2><p>{report.summary}</p><div className="report-metrics"><strong>{report.active_incidents}<small>ACTIVE INCIDENTS</small></strong><strong>{report.affected_population.toLocaleString()}<small>PEOPLE AFFECTED</small></strong><strong>{report.complaints_received}<small>COMPLAINTS</small></strong></div><div className="privacy-note"><FileText size={16} /> Generated from the current Pralay X data platform.</div></Modal>; }
+function Modal({ children, onClose, wide }: { children: ReactNode; onClose: () => void; wide?: boolean }) { return <div className="modal-overlay" onMouseDown={onClose}><div className={`modal-card ${wide ? 'wide' : ''}`} onMouseDown={e => e.stopPropagation()}><button className="close-btn" onClick={onClose}><X /></button>{children}</div></div>; }
+function compact(n: number) { if (n >= 1000000) return `${(n / 1000000).toFixed(n % 1000000 ? 2 : 0)}M`; if (n >= 1000) return `${(n / 1000).toFixed(n % 1000 ? 1 : 0)}K`; return String(n); }
+export default App;

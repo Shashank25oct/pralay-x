@@ -1,0 +1,1 @@
+export default function Logo({small=false}:{small?:boolean}){return <div className={`logo-block ${small?'small':''}`}><img src="/pralay-x-logo.png" alt="Pralay X"/><div><div className="logo-name">PRALAY-X</div><div className="logo-sub">DISASTER INTELLIGENCE & RESPONSE SYSTEM</div></div></div>}
