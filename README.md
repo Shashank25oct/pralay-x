@@ -30,3 +30,16 @@ uvicorn app.main:app --reload --port 8000
 - Password: `PralayX@123`
 
 > Simulation/seeded data is clearly distinguished from operational records. Critical actions remain under authorized human control.
+
+## Copyright
+
+Copyright © 2026 Shashank Shrivastava.
+
+PRALAY X is an open-source disaster intelligence and early-warning
+platform developed by Shashank Shrivastava.
+
+## License
+
+PRALAY X is released under the MIT License.
+
+See the [LICENSE](LICENSE) file for the complete license text.
