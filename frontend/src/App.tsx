@@ -75,8 +75,8 @@ function Intro({ onPublic, onLogin }: { onPublic: () => void; onLogin: () => voi
 }
 
 function Login({ onBack, onSuccess }: { onBack: () => void; onSuccess: () => void }) {
-  const [user, setUser] = useState('admin@pralayx.gov.in');
-  const [password, setPassword] = useState('PralayX@123');
+  const [user, setUser] = useState('');
+  const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [remember, setRemember] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -109,7 +109,7 @@ function Login({ onBack, onSuccess }: { onBack: () => void; onSuccess: () => voi
         {error && <div className="form-error"><AlertTriangle size={17} /> <span>{error}</span></div>}
         <button className="primary full login-submit" disabled={busy}>{busy ? <><RefreshCw className="spin" size={17} /> AUTHENTICATING…</> : <>LOG IN <ArrowRight size={17} /></>}</button>
         <div className="login-security"><ShieldCheck size={16} /><span><b>AUTHORIZED ACCESS ONLY</b><br />Access attempts may be logged and monitored for security purposes.</span></div>
-        <div className="demo-note">Prototype access: <b>admin@pralayx.gov.in</b> / <b>PralayX@123</b></div>
+        
       </form>
     </main>
     <footer className="auth-footer">SECURE LOGIN <i /> MFA ENABLED <i /> SESSION PROTECTED <i /> DATA ENCRYPTED</footer>
